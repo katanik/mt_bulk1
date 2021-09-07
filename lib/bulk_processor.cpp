@@ -1,7 +1,4 @@
 #include <iostream>
-#include <algorithm>
-#include <fstream>
-#include <sstream>
 
 #include "bulk_processor.h"
 
@@ -14,6 +11,19 @@ BulkProcessor::~BulkProcessor()
 {
     if (m_braceCounter == 0)
         flushCurrentBulk();
+}
+
+void BulkProcessor::subscribe(IBulkSibscriber *s)
+{
+    m_subscribers.push_back(s);
+}
+
+void BulkProcessor::notify()
+{
+    for (auto s : m_subscribers)
+    {
+        s->run(m_currentCmdBulk);
+    }
 }
 
 bool BulkProcessor::readNextLine()
@@ -53,21 +63,7 @@ void BulkProcessor::flushCurrentBulk()
     if (m_currentCmdBulk.isEmpty())
         return;
 
-    // print to file
-    std::ofstream outputFile;
-    std::stringstream fileName;
-    fileName << "bulk" << m_currentCmdBulk.getTimeStamp() << ".log";
-    outputFile.open(fileName.str(), std::fstream::out);
-    if (!outputFile.is_open())
-    {
-        std::cout << "failed to create file " << '\n';
-        return;
-    }
-    bulk::printCmdBulk(outputFile, m_currentCmdBulk);
-    outputFile.close();
-
-    // print to standard output
-    bulk::printCmdBulk(std::cout, m_currentCmdBulk);
+    notify();
     m_currentCmdBulk.clear();
 }
 
